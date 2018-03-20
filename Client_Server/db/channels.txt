@@ -1,0 +1,7 @@
+MainChannel This is the MainChannel topic @ [Alex]
+New This is a private channel hi [Alex]
+MainChannel g @ [ad]
+MainChannel This is the main channel's topic @ [Alex]
+New This is a private channel's topic hello [Alex]
+MainChannel x @ [Alex]
+MainChannel x @ [Alex]

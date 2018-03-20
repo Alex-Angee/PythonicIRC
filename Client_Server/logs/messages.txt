@@ -1,0 +1,48 @@
+MainChannel Alex: hello
+MainChannel Austin: how are you doing?
+New Austin: hey
+New Alex: welcome
+MainChannel Austin: hello
+MainChannel Alex: hello
+MainChannel Austin: PRIVMSG You: Hello
+
+MainChannel ad: PRIVMSG You: hi
+
+MainChannel ad: PRIVMSG You: hi
+
+MainChannel ad: PRIVMSG You: hello
+
+MainChannel ad: PRIVMSG You: hello
+
+MainChannel Alex: PRIVMSG You: hei
+
+MainChannel Alex: Greetings
+New Austin: hello
+MainChannel Alex: hello
+New Austin: hello
+MainChannel Austin: Hey Alex!
+MainChannel Alex: PRIVMSG You: Hey Austin
+
+MainChannel Alex: PRIVMSG Alex: Hey Austin
+
+MainChannel Austin: PRIVMSG You: How are you?
+
+MainChannel Austin: AWAY I'm currently AWAY
+
+MainChannel Austin: PRIVMSG You: how are you?
+
+MainChannel Austin: PRIVMSG Austin: how are you?
+
+MainChannel Austin: NOTICE You: How are you?
+
+MainChannel Austin: NOTICE You: Hi!
+
+MainChannel Austin: NOTICE Austin: Hi!
+
+MainChannel Austin: he
+MainChannel Austin: e
+MainChannel Austin: e
+MainChannel Austin: e
+MainChannel Austin: e
+MainChannel Austin: hi
+MainChannel Austin: /operall Hi
