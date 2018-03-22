@@ -5,6 +5,7 @@ from pathlib import Path
 import ChatServer
 import json
 import asyncio
+import threading
 
 
 class Commands:
@@ -1093,6 +1094,14 @@ class Commands:
         loop.close()
         return sync
 
+    def ser_channels(self, user):
+        sync = self.serialize_channels()
+        user.socket.send(sync)
+
+    def refresh(self, user):
+        t = threading.Timer(0.001, self.ser_channels, args=(user,))
+        t.start()
+
     def start(self, user):
         self.newUser(user)
         self.loadBanUser()
@@ -1104,8 +1113,8 @@ class Commands:
             user.socket.send("> You are ban form this server.".encode('utf8'))
             user.socket.disconnect()
         else:
+            self.refresh(user)
             while True:
-                user.socket.send(self.serialize_channels())
                 if user.socket.fileno() != -1:
                     chatMessage = user.socket.recv(user.size).decode('utf8')
                     args = chatMessage.split(" ")
@@ -1201,7 +1210,7 @@ class Commands:
                         self.broadcast_message(chatMessage + '\n', user)
                         self.log(user, chatMessage)
 
-                    user.socket.send(self.serialize_channels())
+                    self.refresh(user)
 
                 else:
                     break

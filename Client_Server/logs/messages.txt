@@ -112,3 +112,39 @@ MainChannel a:
 New a: 
 Another a: n
 New a: hello
+MainChannel Alex: Hello
+NEw Alex: Hello guys
+Hello Alex: hey
+MainChannel Sam: hi
+New Alex: hi
+New Alex: hi
+MainChannel Sam: a
+MainChannel Alex: hi
+MainChannel Sam: a
+MainChannel Sam: a
+MainChannel Sam: a
+MainChannel Sam: a
+MainChannel Sam: a
+MainChannel Alex: 
+MainChannel Alex: hey
+MainChannel Sam: hi
+MainChannel Sam: hi
+New Sam: hi
+New Alex: hey
+MainChannel Alex: hi
+MainChannel Sam: hi
+MainChannel Sam: a
+MainChannel hi: hey
+MainChannel alex: hey
+MainChannel Alex: 
+MainChannel Alex: hi
+MainChannel a: hi
+MainChannel Alex: hi
+MainChannel a: hey
+MainChannel Alex: hey
+MainChannel a: hey
+MainChannel b: hi
+MainChannel a: 
+MainChannel a: hey
+MainChannel b: hey
+MainChannel a: s
