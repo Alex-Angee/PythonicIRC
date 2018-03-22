@@ -1,10 +1,10 @@
-import socket
-import sys
 import Channel
 from datetime import datetime
 import time
 from pathlib import Path
 import ChatServer
+import json
+import asyncio
 
 
 class Commands:
@@ -1073,6 +1073,26 @@ class Commands:
                 newLine = line.split(" ")
                 self.bannedusers[newLine[0]] = newLine[1]
 
+    async def ser_obj(self):
+        channels = Commands.allChannels["All Channels"]
+        ser_channels = {}
+        for key, value in channels.items():
+            list = []
+            users = value.allUsers.values()
+            for name in users:
+                list.append(name.name)
+            ser_channels[key] = list
+        sync = json.dumps(ser_channels).encode('utf8')
+        await asyncio.sleep(0.001)
+        return sync
+
+    def serialize_channels(self):
+        loop = asyncio.new_event_loop()
+        done = loop.run_until_complete(self.ser_obj())
+        sync = "~%c%h%a%n%n%e%l%s%~".encode('utf8') + done
+        loop.close()
+        return sync
+
     def start(self, user):
         self.newUser(user)
         self.loadBanUser()
@@ -1085,6 +1105,7 @@ class Commands:
             user.socket.disconnect()
         else:
             while True:
+                user.socket.send(self.serialize_channels())
                 if user.socket.fileno() != -1:
                     chatMessage = user.socket.recv(user.size).decode('utf8')
                     args = chatMessage.split(" ")
@@ -1179,5 +1200,8 @@ class Commands:
                     else:
                         self.broadcast_message(chatMessage + '\n', user)
                         self.log(user, chatMessage)
+
+                    user.socket.send(self.serialize_channels())
+
                 else:
                     break

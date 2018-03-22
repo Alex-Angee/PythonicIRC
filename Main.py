@@ -15,13 +15,18 @@ class SocketThreadedTask(threading.Thread):
         while True:
             try:
                 message = self.socket.receive()
-
+                channels = None
+                if message[0] is None:
+                    channels = message[1]
+                    message = None
+                else:
+                    message = message[0]
                 if message == '/quit':
                     self.callback('> You have been disconnected from the chat room.')
                     self.socket.disconnect()
                     break
                 else:
-                    self.callback(message)
+                    self.callback(message, channels)
             except OSError:
                 break
 
@@ -75,6 +80,25 @@ class ChatWindow(tk.Frame):
 
         self.send_message_button = tk.Button(parent, text="Send", width=10, bg="#CACACA", activebackground="#CACACA")
         self.send_message_button.grid(row=1, column=1, padx=5, sticky="we")
+
+    def update(self, message, channels):
+        if message is None:
+            self.refresh_users(channels)
+        else:
+            self.update_chat_window(message)
+
+    def refresh_users(self, channels={}):
+        self.usersListBox.delete(0, self.usersListBox.size())
+        if bool(channels) is True:
+            count = 0
+            for key, value in channels.items():
+                self.usersListBox.insert(count, key)
+                count += 1
+                for users in value:
+                    self.usersListBox.insert(count, ("\t" + users))
+                    count += 1
+        else:
+            self.usersListBox.insert(0, " ")
 
     def update_chat_window(self, message):
         self.messageTextArea.configure(state='normal')
@@ -146,7 +170,7 @@ class ChatGUI(tk.Frame):
             self.clientSocket.connect(dialogResult[0], dialogResult[1])
 
             if self.clientSocket.isClientConnected:
-                SocketThreadedTask(self.clientSocket, self.ChatWindow.update_chat_window).start()
+                SocketThreadedTask(self.clientSocket, self.ChatWindow.update).start()
             else:
                 tk.messagebox.showwarning("Error", "Unable to connect to the server.")
 

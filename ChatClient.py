@@ -1,5 +1,6 @@
 import socket
 import sys
+import json
 
 class Client:
     def __init__(self):
@@ -31,4 +32,11 @@ class Client:
         if not self.isClientConnected:
             return ""
 
-        return self.clientSocket.recv(size).decode('utf8')
+        string = self.clientSocket.recv(size).decode('utf8')
+        if '~%c%h%a%n%n%e%l%s%~' in string:
+            string = string.replace('~%c%h%a%n%n%e%l%s%~', '')
+            string[0]
+            ser_dict = json.loads(string)
+            return [None, ser_dict]
+        else:
+            return [string, None]

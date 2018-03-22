@@ -1,9 +1,3 @@
-import socket
-import sys
-import Main as main
-import User as user
-import Commands
-
 class Channel:
 
     def __init__(self, name, channeltopic, user, isPrivate=False, channelPassword=None, sysops=[], admins=[], helpMessage='', allChannels={}):
@@ -22,9 +16,6 @@ class Channel:
         if isPrivate:
             self.channelPassword = channelPassword
         self.allUsers[user.socket] = user
-
-        # Add users to the userslistbox
-        #main.ChatWindow.usersListBox
 
     def start(self, user):
         # Do not allow to make another name
