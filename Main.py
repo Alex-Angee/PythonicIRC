@@ -22,16 +22,19 @@ class SocketThreadedTask(threading.Thread):
             try:
                 message = self.socket.receive()
                 if message[0] == "channels":
-                    self.allChannels = channels = message[1]
+                    self.allChannels = message[1]
                     for key, value in self.allChannels.items():
                         if key[0] == '+':
-                            key = key[1:]
+                            oldKey = key
+                            newKey = key[1:]
+                            self.allChannels[newKey] = value
+                            del self.allChannels[oldKey]
                             self.publicChannels[key] = value
                         elif key[0] == '-':
                             key = key[1:]
                             self.privateChannels[key] = value
                     message = message[0]
-                    self.callback(message, channels, None)
+                    self.callback(message, self.allChannels, None)
                 elif message[0] == "messages":
                     self.channelMessages = messages = message[1]
                     message = message[0]
@@ -116,18 +119,11 @@ class ChatWindow(tk.Frame):
         if bool(channels) is True:
             count = 2
             for key, value in channels.items():
-                if key[0] == '+':
-                    key = key[1:]
-                    # Dropdown instead
-                    # USE DROPDOWN channel_Button = tk.Button(key)
-                    # dropdown = tk.OptionMenu()
-                    self.usersListBox.insert(count, key)
-                    for users in value:
-                        self.usersListBox.insert(count, ("\t" + users))
-                        count += 1
-                elif key[0] == '-':
-                    key = key[1:]
-                    self.usersListBox.insert(count, key)
+                self.usersListBox.insert(count, key)
+                for users in value:
+                    self.usersListBox.insert(count, ("\t" + users))
+                    count += 1
+                self.usersListBox.insert(count, key)
                 count += 1
         else:
             self.usersListBox.insert(0, " ")
