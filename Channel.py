@@ -12,6 +12,7 @@ class Channel:
         self.channelPassword = ""
         self.allChannels = allChannels.copy()
         self.channelTopic = channeltopic
+        self.messages = []
 
         if isPrivate:
             self.channelPassword = channelPassword

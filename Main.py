@@ -10,23 +10,39 @@ class SocketThreadedTask(threading.Thread):
         threading.Thread.__init__(self)
         self.socket = socket
         self.callback = callback
+        self.allChannels = None
+        self.privateChannels = {}
+        self.publicChannels = {}
+        self.channelMessages = {}
 
     def run(self):
+        channels = None
+        messages = None
         while True:
             try:
                 message = self.socket.receive()
-                channels = None
-                if message[0] is None:
-                    channels = message[1]
-                    message = None
+                if message[0] == "channels":
+                    self.allChannels = channels = message[1]
+                    for key, value in self.allChannels.items():
+                        if key[0] == '+':
+                            key = key[1:]
+                            self.publicChannels[key] = value
+                        elif key[0] == '-':
+                            key = key[1:]
+                            self.privateChannels[key] = value
+                    message = message[0]
+                    self.callback(message, channels, None)
+                elif message[0] == "messages":
+                    self.channelMessages = messages = message[1]
+                    message = message[0]
+                    self.callback(message, None, messages)
                 else:
                     message = message[0]
+                    self.callback(message, None, None)
                 if message == '/quit':
                     self.callback('> You have been disconnected from the chat room.')
                     self.socket.disconnect()
                     break
-                else:
-                    self.callback(message, channels)
             except OSError:
                 break
 
@@ -81,22 +97,38 @@ class ChatWindow(tk.Frame):
         self.send_message_button = tk.Button(parent, text="Send", width=10, bg="#CACACA", activebackground="#CACACA")
         self.send_message_button.grid(row=1, column=1, padx=5, sticky="we")
 
-    def update(self, message, channels):
-        if message is None:
+    def update(self, message, channels, messages):
+        if (message is None) and (messages is None):
             self.refresh_users(channels)
-        else:
+        elif (channels is None) and (message is None):
+            self.refresh_messages(messages)
+        elif (channels is None) and (messages is None):
             self.update_chat_window(message)
 
+    def refresh_messages(self, messages):
+        for key, value in messages.items():
+            for message in value:
+                print(message)
+
     def refresh_users(self, channels={}):
-        self.usersListBox.delete(0, self.usersListBox.size())
+        self.usersListBox.insert(0, "Channels:")
+        self.usersListBox.delete(1, self.usersListBox.size())
         if bool(channels) is True:
-            count = 0
+            count = 2
             for key, value in channels.items():
-                self.usersListBox.insert(count, key)
+                if key[0] == '+':
+                    key = key[1:]
+                    # Dropdown instead
+                    # USE DROPDOWN channel_Button = tk.Button(key)
+                    # dropdown = tk.OptionMenu()
+                    self.usersListBox.insert(count, key)
+                    for users in value:
+                        self.usersListBox.insert(count, ("\t" + users))
+                        count += 1
+                elif key[0] == '-':
+                    key = key[1:]
+                    self.usersListBox.insert(count, key)
                 count += 1
-                for users in value:
-                    self.usersListBox.insert(count, ("\t" + users))
-                    count += 1
         else:
             self.usersListBox.insert(0, " ")
 

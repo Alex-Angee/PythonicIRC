@@ -5,7 +5,6 @@ from pathlib import Path
 import ChatServer
 import json
 import asyncio
-import threading
 
 
 class Commands:
@@ -273,6 +272,7 @@ class Commands:
                         users.socket.send((user.name + ": " + message).encode('utf8'))
                     else:
                         user.socket.send(('You: ' + message).encode('utf8'))
+            channelObject.messages.append((user.name + ": " + message))
 
     def joinChannel(self, user, listofargs):
         listOfPasswords = []
@@ -580,10 +580,14 @@ class Commands:
         for key, value in channels.items():
             if channelName == key:
                 if user in value.allUsers.values():
-                    switch = "Yes"
-                    user.currentChannel = value
-                    message += "> You have switched to " + channelName + ".\n"
-                    break
+                    if user.currentChannel == value:
+                        user.socket.send("> You are currently in this channel.\n".encode('utf8'))
+                        break
+                    else:
+                        switch = "Yes"
+                        user.currentChannel = value
+                        message += "> You have switched to " + channelName + ".\n"
+                        break
                 else:
                     switch = "NotM"
                     message += "> You are not a member of " + channelName + ".\n"
@@ -1077,14 +1081,38 @@ class Commands:
     async def ser_obj(self):
         channels = Commands.allChannels["All Channels"]
         ser_channels = {}
+        timewait = 0.001
         for key, value in channels.items():
             list = []
             users = value.allUsers.values()
             for name in users:
                 list.append(name.name)
-            ser_channels[key] = list
+            if value.isPrivate is False:
+                ser_channels["+" + key] = list
+            else:
+                ser_channels["-" + key] = list
+            timewait += 0.0005
         sync = json.dumps(ser_channels).encode('utf8')
-        await asyncio.sleep(0.001)
+        await asyncio.sleep(timewait)
+        return sync
+
+    async def ser_chan_messages_(self):
+        channels = Commands.allChannels["All Channels"]
+        ser_channels = {}
+        timewait = 0.0005
+        for key, value in channels.items():
+            list_messages = value.messages
+            ser_channels[key] = list_messages
+            timewait += 0.0005
+        sync = json.dumps(ser_channels).encode('utf8')
+        await asyncio.sleep(timewait)
+        return sync
+
+    def serialize_messages(self):
+        loop = asyncio.new_event_loop()
+        done = loop.run_until_complete(self.ser_chan_messages_())
+        sync = "~%m%e%s%s%a%g%e%s%~".encode('utf8') + done
+        loop.close()
         return sync
 
     def serialize_channels(self):
@@ -1094,13 +1122,17 @@ class Commands:
         loop.close()
         return sync
 
-    def ser_channels(self, user):
-        sync = self.serialize_channels()
-        user.socket.send(sync)
+    def refresh(self):
+        users = Commands.allUsers.keys()
+        channels = self.serialize_channels()
+        for user in users:
+            user.socket.send(channels)
 
-    def refresh(self, user):
-        t = threading.Timer(0.001, self.ser_channels, args=(user,))
-        t.start()
+    def refresh_messages(self):
+        users = Commands.allUsers.keys()
+        messages = self.serialize_messages()
+        for user in users:
+            user.socket.send(messages)
 
     def start(self, user):
         self.newUser(user)
@@ -1113,9 +1145,10 @@ class Commands:
             user.socket.send("> You are ban form this server.".encode('utf8'))
             user.socket.disconnect()
         else:
-            self.refresh(user)
             while True:
                 if user.socket.fileno() != -1:
+                    self.refresh()
+                    #self.refresh_messages()
                     chatMessage = user.socket.recv(user.size).decode('utf8')
                     args = chatMessage.split(" ")
 
@@ -1209,8 +1242,6 @@ class Commands:
                     else:
                         self.broadcast_message(chatMessage + '\n', user)
                         self.log(user, chatMessage)
-
-                    self.refresh(user)
 
                 else:
                     break

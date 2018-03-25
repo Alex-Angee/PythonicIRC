@@ -35,8 +35,11 @@ class Client:
         string = self.clientSocket.recv(size).decode('utf8')
         if '~%c%h%a%n%n%e%l%s%~' in string:
             string = string.replace('~%c%h%a%n%n%e%l%s%~', '')
-            string[0]
             ser_dict = json.loads(string)
-            return [None, ser_dict]
+            return ["channels", ser_dict]
+        if '~%m%e%s%s%a%g%e%s%~' in string:
+            string = string.replace('~%m%e%s%s%a%g%e%s%~', '')
+            ser_dict = json.loads(string)
+            return ["messages", ser_dict]
         else:
             return [string, None]
