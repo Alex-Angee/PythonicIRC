@@ -4,6 +4,7 @@ import ChatClient as client
 import BaseDialog as dialog
 import BaseEntry as entry
 import threading
+from tkinter import END
 
 class SocketThreadedTask(threading.Thread):
     def __init__(self, socket, callback):
@@ -31,10 +32,13 @@ class SocketThreadedTask(threading.Thread):
                             del self.allChannels[oldKey]
                             self.publicChannels[key] = value
                         elif key[0] == '-':
-                            key = key[1:]
+                            oldKey = key
+                            newKey = key[1:]
+                            self.allChannels[newKey] = value
+                            del self.allChannels[oldKey]
                             self.privateChannels[key] = value
                     message = message[0]
-                    self.callback(message, self.allChannels, None)
+                    self.callback(None, self.allChannels, None)
                 elif message[0] == "messages":
                     self.channelMessages = messages = message[1]
                     message = message[0]
@@ -100,7 +104,7 @@ class ChatWindow(tk.Frame):
         self.send_message_button = tk.Button(parent, text="Send", width=10, bg="#CACACA", activebackground="#CACACA")
         self.send_message_button.grid(row=1, column=1, padx=5, sticky="we")
 
-    def update(self, message, channels, messages):
+    def update_window(self, message, channels, messages):
         if (message is None) and (messages is None):
             self.refresh_users(channels)
         elif (channels is None) and (message is None):
@@ -114,8 +118,7 @@ class ChatWindow(tk.Frame):
                 print(message)
 
     def refresh_users(self, channels={}):
-        self.usersListBox.insert(0, "Channels:")
-        self.usersListBox.delete(1, self.usersListBox.size())
+        self.usersListBox.delete(0, END)
         if bool(channels) is True:
             count = 2
             for key, value in channels.items():
@@ -123,10 +126,23 @@ class ChatWindow(tk.Frame):
                 for users in value:
                     self.usersListBox.insert(count, ("\t" + users))
                     count += 1
-                self.usersListBox.insert(count, key)
                 count += 1
         else:
             self.usersListBox.insert(0, " ")
+
+    def switch(self, event, **callbacks):
+        widget = event.widget
+        selection = widget.curselection()
+        value = widget.get(selection[0])
+        if "\t" in value:
+            message = "/relayToUser This is a user."
+            callbacks['send_message_to_server'](message)
+        else:
+            switch = "/switch " + value
+            self.messageTextArea.configure(state='normal')
+            self.messageTextArea.delete(1.0, END)
+            self.messageTextArea.configure(state='disabled')
+            callbacks['send_message_to_server'](switch)
 
     def update_chat_window(self, message):
         self.messageTextArea.configure(state='normal')
@@ -145,6 +161,7 @@ class ChatWindow(tk.Frame):
 
     def bind_widgets(self, callback):
         self.send_message_button['command'] = lambda sendCallback = callback : self.send_message(send_message_to_server=sendCallback)
+        self.usersListBox.bind("<<ListboxSelect>>", lambda event, sendCallback = callback : self.switch(event, send_message_to_server=sendCallback))
         self.entryField.bind("<Return>", lambda event, sendCallback = callback : self.send_message(send_message_to_server=sendCallback))
         self.messageTextArea.bind("<1>", lambda event: self.messageTextArea.focus_set())
 
@@ -198,7 +215,7 @@ class ChatGUI(tk.Frame):
             self.clientSocket.connect(dialogResult[0], dialogResult[1])
 
             if self.clientSocket.isClientConnected:
-                SocketThreadedTask(self.clientSocket, self.ChatWindow.update).start()
+                SocketThreadedTask(self.clientSocket, self.ChatWindow.update_window).start()
             else:
                 tk.messagebox.showwarning("Error", "Unable to connect to the server.")
 

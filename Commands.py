@@ -279,63 +279,67 @@ class Commands:
         listOfChannels = {}
         start = False
         end = False
-        for string in listofargs:
-            if '[' in string:
-                start = True
-                string.replace('[', '')
-                if ',' in string:
-                    string.replace(',', '')
-                if ']' in string:
-                    end = True
-                    string.replace(']', '')
-                listOfPasswords.append(string)
-            elif ']' in string:
-                end = True
-                string.replace(']', '')
-                listOfPasswords.append(string)
-            else:
-                if start is False and end is False:
+        if isinstance(listofargs, str):
+            channel = listofargs
+            listOfChannels[channel] = None
+        else:
+            for string in listofargs:
+                if '[' in string:
+                    start = True
+                    string.replace('[', '')
                     if ',' in string:
                         string.replace(',', '')
-                    listOfChannels[string] = None
-                else:
+                    if ']' in string:
+                        end = True
+                        string.replace(']', '')
                     listOfPasswords.append(string)
+                elif ']' in string:
+                    end = True
+                    string.replace(']', '')
+                    listOfPasswords.append(string)
+                else:
+                    if start is False and end is False:
+                        if ',' in string:
+                            string.replace(',', '')
+                        listOfChannels[string] = None
+                    else:
+                        listOfPasswords.append(string)
 
         for key, value in listOfChannels.items():
             if self.doesChannelExist(key) is True:
                 channelObj = Commands.allChannels["All Channels"][key]
                 if channelObj.isPrivate is True:
-                    listOfChannels[key] = listOfPasswords[0]
-                    listOfPasswords = listOfPasswords[1:]
+                    if len(listOfPasswords) > 0:
+                        listOfChannels[key] = listOfPasswords[0]
+                        listOfPasswords = listOfPasswords[1:]
+                    else:
+                        listOfChannels[key] = "Password"
                 else:
                     listOfChannels[key] = "exists"
             else:
                 listOfChannels[key] = "does not exist"
 
-        count = 0
         for key, value in listOfChannels.items():
             if value == "exists":
-                if count == 0:
                     self.joinPublic(key, user)
-                    user.currentChannel = Commands.allChannels["All Channels"][key]
-                    serverMessage = "> " + user.name + " has joined channel " + user.currentChannel.channelName + ".\n"
-                    self.broadcast_channel(serverMessage, user)
             elif value == "does not exist":
-                if count == 0:
                     user.currentChannel = self.create(user, key)
                     serverMessage = "> " + user.name + " has joined channel " + user.currentChannel.channelName + ".\n"
                     self.broadcast_channel(serverMessage, user)
             else:
-                if Commands.allChannels["All Channels"][count].channelPassword == value:
-                    if count == 0:
+                if Commands.allChannels["All Channels"][key].channelPassword == value:
                         self.joinPrivate(key, user)
-                        user.currentChannel = Commands.allChannels["All Channels"][key]
-                        serverMessage = "> " + user.name + " has joined channel " + user.currentChannel.channelName + ".\n"
-                        self.broadcast_channel(serverMessage, user)
+                elif len(listOfPasswords) == 0:
+                    user.socket.send(("> What's the password for " + key + "\n").encode('utf8'))
+                    password = user.socket.recv(user.size).decode('utf8')
+                    if Commands.allChannels["All Channels"][key].channelPassword == password:
+                        self.joinPrivate(key, user)
+                    else:
+                        error = "> The password is incorrect for " + key + " .\n"
+                        user.socket.send(error.encode('utf8'))
                 else:
                     error = "> The password is incorrect for " + key + " .\n"
                     user.socket.send(error.encode('utf8'))
-            count+=1
 
     # Create channel command
     def createChannel(self, channelName, allChannels, user, isPrivate=False):
@@ -581,7 +585,8 @@ class Commands:
             if channelName == key:
                 if user in value.allUsers.values():
                     if user.currentChannel == value:
-                        user.socket.send("> You are currently in this channel.\n".encode('utf8'))
+                        message = "> You are currently in this channel.\n"
+                        switch = "Mem"
                         break
                     else:
                         switch = "Yes"
@@ -594,7 +599,13 @@ class Commands:
                     break
         if switch == "No":
             message += "> The channel does not exist.\n"
-        user.socket.send(message.encode('utf8'))
+            user.socket.send(message.encode('utf8'))
+        elif switch == "Mem":
+            user.socket.send(message.encode('utf8'))
+        elif switch == "Yes":
+            user.socket.send(message.encode('utf8'))
+        else:
+            self.joinChannel(user, channelName)
 
     # Ping message
     def ping(self, user):
@@ -929,14 +940,40 @@ class Commands:
     # Join public channel function
     def joinPublic(self, channel, user):
         if isinstance(channel, str):
-            Commands.allChannels["All Channels"][channel].allUsers[user.socket] = user
+            if user not in Commands.allChannels["All Channels"][channel].allUsers.values():
+                Commands.allChannels["All Channels"][channel].allUsers[user.socket] = user
+                serverMessage = "> " + user.name + " has joined channel " + user.currentChannel.channelName + ".\n"
+                self.broadcast_channel(serverMessage, user)
+            else:
+                if user.currentChannel != Commands.allChannels["All Channels"][channel]:
+                    self.switch(user, channel)
         else:
-            Commands.allChannels["All Channels"][channel.channelName].allUsers[user.socket] = user
+            if user not in Commands.allChannels["All Channels"][channel.channelName].allUsers.values():
+                Commands.allChannels["All Channels"][channel.channelName].allUsers[user.socket] = user
+                serverMessage = "> " + user.name + " has joined channel " + user.currentChannel.channelName + ".\n"
+                self.broadcast_channel(serverMessage, user)
+            else:
+                if user.currentChannel != Commands.allChannels["All Channels"][channel.channelName]:
+                    self.switch(user, channel.channelName)
 
     # Join private channel
     def joinPrivate(self, channel, user):
-        if user not in Commands.allChannels["All Channels"][channel.channelName].allUsers.values():
-            Commands.allChannels["All Channels"][channel.channelName].allUsers[user.socket] = user
+        if isinstance(channel, str):
+            if user not in Commands.allChannels["All Channels"][channel].allUsers.values():
+                Commands.allChannels["All Channels"][channel].allUsers[user.socket] = user
+                serverMessage = "> " + user.name + " has joined channel " + user.currentChannel.channelName + ".\n"
+                self.broadcast_channel(serverMessage, user)
+            else:
+                if user.currentChannel != Commands.allChannels["All Channels"][channel]:
+                    self.switch(user, channel)
+        else:
+            if user not in Commands.allChannels["All Channels"][channel.channelName].allUsers.values():
+                Commands.allChannels["All Channels"][channel.channelName].allUsers[user.socket] = user
+                serverMessage = "> " + user.name + " has joined channel " + user.currentChannel.channelName + ".\n"
+                self.broadcast_channel(serverMessage, user)
+            else:
+                if user.currentChannel != Commands.allChannels["All Channels"][channel.channelName]:
+                    self.switch(user, channel.channelName)
 
     # Create Channel function
     def create(self, user, channelName):
@@ -955,6 +992,13 @@ class Commands:
             channel = self.createChannel(channelName, Commands.allChannels, user, isPrivate)
             self.joinPublic(channel, user)
             return channel
+
+    def relay(self, user, listOfArgs):
+        if len(listOfArgs) > 0:
+            message = " ".join(listOfArgs)
+            user.socket.send((message + "\n").encode('utf8'))
+        else:
+            user.socket.send("> You did not provide a message.\n".encode('utf8'))
 
     # Broadcast message to channel
     def broadcast_channel(self, message, user):
@@ -1081,7 +1125,6 @@ class Commands:
     async def ser_obj(self):
         channels = Commands.allChannels["All Channels"]
         ser_channels = {}
-        timewait = 0.001
         for key, value in channels.items():
             list = []
             users = value.allUsers.values()
@@ -1091,21 +1134,18 @@ class Commands:
                 ser_channels["+" + key] = list
             else:
                 ser_channels["-" + key] = list
-            timewait += 0.0005
         sync = json.dumps(ser_channels).encode('utf8')
-        await asyncio.sleep(timewait)
+        await asyncio.sleep(0.05)
         return sync
 
     async def ser_chan_messages_(self):
         channels = Commands.allChannels["All Channels"]
         ser_channels = {}
-        timewait = 0.0005
         for key, value in channels.items():
             list_messages = value.messages
             ser_channels[key] = list_messages
-            timewait += 0.0005
         sync = json.dumps(ser_channels).encode('utf8')
-        await asyncio.sleep(timewait)
+        await asyncio.sleep(0.05)
         return sync
 
     def serialize_messages(self):
@@ -1230,6 +1270,8 @@ class Commands:
                         self.wallops(user, listofargs)
                     elif arg1 == '/silence':
                         self.silence(user, listofargs)
+                    elif arg1 == '/relaytouser':
+                        self.relay(user, listofargs)
                     # not done yet
                     elif arg1 == '/channelmodes':
                         self.channelModes(user)
